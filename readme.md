@@ -1,34 +1,35 @@
-# MD_04_BLDC_VOFA_BTN
+# MD_05_BLDC_Speed_OpenLoop
 
-STM32F407 BLDC motor-control firmware based on STM32 HAL, CMSIS-RTOS V2, VOFA+ and FreeRTOS. The current control path is a manual six-step commutation prototype: each press of `KEY0` advances one commutation step. ADC measurements are collected by DMA and streamed to VOFA+ using the FireWater protocol.
+STM32F407 BLDC motor-control firmware based on STM32 HAL, CMSIS-RTOS V2, and FreeRTOS. This project implements **Hall sensor-based automatic commutation with bidirectional speed control**. ADC measurements are collected by DMA and real-time motor diagnostics are processed by the monitor task.
 
 The project is generated with STM32CubeMX and built with CMake/Ninja. The target uses an STM32F407 device running at 168 MHz.
 
 ## Current Features
 
-- Manual six-step BLDC commutation driven by an EXTI button interrupt
+- Hall sensor-based automatic six-step BLDC commutation
+- Bidirectional motor control (forward and reverse rotation)
 - TIM1 three-channel PWM for the high-side phases
 - GPIO-controlled low-side phase outputs
 - ADC1 and ADC3 multi-channel continuous conversion with circular DMA
-- Motor monitor task for back-EMF, phase current, bus voltage, temperature, and Hall inputs
-- CMSIS-RTOS message queue between monitor and UART output tasks
-- USART1 FireWater output for VOFA+
+- Motor monitor task for back-EMF, phase current, bus voltage, temperature, and Hall sensor inputs
+- Real-time motor state tracking and commutation based on Hall signal transitions
 - SSD1306-compatible OLED support through the existing BSP driver
 
-This is an open-loop/manual commutation prototype. Automatic Hall commutation, closed-loop speed control, current control, and fault protection are not yet implemented in this repository.
+This project provides Hall-based automatic commutation with open-loop PWM speed control. Closed-loop speed regulation, current limiting, and advanced fault protection are not yet implemented.
 
 ## Runtime Flow
 
-1. `main()` initializes GPIO, DMA, USART1, ADC1, ADC3, and TIM1.
-2. `MX_FREERTOS_Init()` creates the monitor, display, and motor-control tasks.
-3. `MonitorTask` continuously samples ADC1/ADC3 and reads the three Hall inputs.
-4. The monitor data is placed in `MotorDatasQueue`.
-5. `DisplayTask` sends one FireWater frame for every queued data set.
-6. A falling edge on `KEY0` wakes `MotorCtrlTask`, increments the commutation step, and calls `rotateMotor()`.
+1. `main()` initializes GPIO, DMA, ADC1, ADC3, TIM1, and interrupt handlers.
+2. `MX_FREERTOS_Init()` creates the motor control and monitor tasks.
+3. `MonitorTask` continuously samples ADC1/ADC3 and reads the three Hall sensor inputs.
+4. Hall sensor state changes trigger `EXTI_Callback()`, which notifies the motor control task.
+5. `MotorCtrlTask` reads the current Hall sensor state and calls `MotorCtrl_DriveMotor()` to update the commutation state.
+6. The appropriate high-side PWM channel and low-side GPIO outputs are activated based on the Hall pattern and rotation direction.
+7. Motor data is continuously processed for diagnostics and monitoring.
 
 ## Motor Control
 
-TIM1 generates PWM on the high-side phase outputs:
+TIM1 generates PWM on the high-side phase outputs. The motor driver uses six-step commutation patterns based on Hall sensor inputs:
 
 | Phase | High-side PWM | Low-side GPIO |
 | --- | --- | --- |
@@ -36,18 +37,31 @@ TIM1 generates PWM on the high-side phase outputs:
 | V | PA9 / TIM1_CH2 | PB14 / `PWM_VL` |
 | W | PA10 / TIM1_CH3 | PB15 / `PWM_WL` |
 
-The current six-step table is:
+### Forward Rotation Commutation Table (Hall Signal → Active Phase)
 
-| Step | High-side PWM | Low-side output |
+| Hall Signal | High-side PWM | Low-side output |
 | --- | --- | --- |
-| 1 | U+ | V- |
-| 2 | U+ | W- |
-| 3 | V+ | W- |
-| 4 | V+ | U- |
-| 5 | W+ | U- |
-| 6 | W+ | V- |
+| 5 (101) | U+ | V- |
+| 1 (001) | U+ | W- |
+| 3 (011) | V+ | W- |
+| 2 (010) | V+ | U- |
+| 6 (110) | W+ | U- |
+| 4 (100) | W+ | V- |
 
-Before each step, all three PWM channels and low-side GPIO outputs are disabled. The PWM period is configured as:
+### Reverse Rotation Commutation Table
+
+The reverse direction reverses the commutation sequence:
+
+| Hall Signal | High-side PWM | Low-side output |
+| --- | --- | --- |
+| 5 (101) | V+ | U- |
+| 1 (001) | W+ | U- |
+| 3 (011) | W+ | V- |
+| 2 (010) | U+ | V- |
+| 6 (110) | U+ | W- |
+| 4 (100) | V+ | W- |
+
+Before each commutation transition, all PWM channels and low-side GPIO outputs are disabled to prevent shoot-through. The PWM period is configured as:
 
 ```text
 TIM1 clock = 168 MHz
@@ -56,7 +70,7 @@ Period     = 100 - 1
 PWM        = 168 MHz / 84 / 100 = 20 kHz
 ```
 
-The initial compare value is `10`, corresponding to approximately 10% duty cycle. The low-side outputs are ordinary GPIOs rather than TIM1 complementary outputs, so dead-time and shoot-through protection must be handled by the power stage or added explicitly before higher-power testing.
+The initial compare value is `10`, corresponding to approximately 10% duty cycle. Speed is controlled by adjusting the PWM duty cycle. The low-side outputs are ordinary GPIOs rather than TIM1 complementary outputs, so dead-time and shoot-through protection must be handled by the power stage or added explicitly before higher-power testing.
 
 ## Pinout
 
@@ -74,28 +88,18 @@ The initial compare value is `10`, corresponding to approximately 10% duty cycle
 
 Verify the driver IC enable polarity before powering the motor. The firmware currently calls `setShutdown(GPIO_PIN_RESET)` when the motor-control task starts.
 
-## VOFA+ FireWater Output
+## VOFA+ FireWater Output (Optional)
 
-USART1 is configured for **115200 baud, 8 data bits, no parity, 1 stop bit**. Each line contains the following 11 comma-separated values:
+USART1 can be optionally configured for **115200 baud, 8 data bits, no parity, 1 stop bit** to stream real-time diagnostic data. Each line contains comma-separated values for motor monitoring. Refer to the display task implementation for the current output format.
 
-```text
-BEMFu,BEMFv,BEMFw,Iu,Iv,Iw,Vbus,temp,Hallu,Hallv,Hallw\n
-```
-
-Example:
-
-```text
-12.345,12.346,12.347,1.200,1.201,1.202,24.000,35.600,1,0,1
-```
-
-In VOFA+, select the serial port, set the baud rate to 115200, and choose the FireWater protocol. The first eight fields are formatted as floating-point values with three decimal places; the last three fields are Hall logic levels.
+In VOFA+, select the serial port, set the baud rate to 115200, and choose the appropriate protocol to view real-time motor data and diagnostics.
 
 ## Project Layout
 
-- `APP/motorCtrl.c`: manual commutation, button notification, and driver control
+- `APP/motorCtrl.c`: Hall-based automatic commutation, direction control, and driver control
+- `APP/motorCtrl.h`: Motor control interface and configuration
 - `APP/monitor.c`: ADC DMA acquisition and motor data calculation
-- `APP/display.c`: message-queue consumer and FireWater UART output
-- `APP/monitor.h`: `MotorDatasType` definition
+- `APP/monitor.h`: Motor data type definitions
 - `Core/`: STM32CubeMX-generated initialization, interrupts, and RTOS setup
 - `BSP/`: OLED driver
 - `Drivers/`: STM32F4 CMSIS and HAL drivers
@@ -130,14 +134,16 @@ Build outputs are placed in `build/Debug` or `build/Release`. The executable tar
 
 ## Debug Checklist
 
-When manual commutation does not work, check these signals in order:
+When Hall-based commutation does not work, check these signals in order:
 
-1. Confirm `EXTI2_IRQHandler()` is reached when PE2 is pulled low.
-2. Confirm `HAL_GPIO_EXTI_Callback()` calls `vTaskNotifyGiveFromISR()`.
-3. Confirm `MotorCtrlTask` increments `step` after each button press.
+1. Confirm Hall sensor inputs (PH10, PH11, PH12) are reading correctly in the monitor task.
+2. Confirm `EXTI_Callback()` is triggered when Hall sensors transition.
+3. Confirm `MotorCtrlTask` is notified and calls `MotorCtrl_DriveMotor()` with the correct Hall signal.
 4. Confirm `CTRL_SD` is at the driver enable level.
 5. Measure PA8/PA9/PA10 for 20 kHz PWM and PB13/PB14/PB15 for the selected low-side output.
-6. Test with a current-limited supply until dead-time and fault handling are verified.
+6. Verify the commutation pattern matches the forward or reverse table based on motor direction.
+7. Test with a current-limited supply until dead-time and fault handling are verified.
+8. If commutation is reversed, swap the motor direction setting or check Hall sensor wiring polarity.
 
 ## Regenerating CubeMX Files
 
