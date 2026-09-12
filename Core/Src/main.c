@@ -184,7 +184,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
   if (htim->Instance == TIM1)
   {
-    motorCtrl_PWMCallback();
+    motorCtrl_PWMCallback(motorCtrl_GetDirection());
   }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM4)

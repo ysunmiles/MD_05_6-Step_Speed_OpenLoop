@@ -47,7 +47,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     BSP/OLED.c
     APP/monitor.c
-    APP/display.c
     APP/motorCtrl.c
 )
 

@@ -275,12 +275,22 @@ void OLED_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Leng
 void OLED_ShowFloat(uint8_t Line, uint8_t Column, float Number, uint8_t DeciLength)
 {
 	uint8_t i;
+	uint8_t IntLength;
 	int32_t IntPart;
+	uint32_t AbsIntPart;
 	uint32_t DecPart;
 	float DecimalValue;
 	
 	/* 提取整数部分 */
 	IntPart = (int32_t)Number;
+	/* 计算整数部分的绝对值，避免对最小负数直接取负导致溢出 */
+	AbsIntPart = (IntPart < 0) ? (0U - (uint32_t)IntPart) : (uint32_t)IntPart;
+	IntLength = 1;
+	while (AbsIntPart >= 10)
+	{
+		AbsIntPart /= 10;
+		IntLength++;
+	}
 	
 	/* 提取小数部分 */
 	DecimalValue = Number - IntPart;
@@ -300,19 +310,20 @@ void OLED_ShowFloat(uint8_t Line, uint8_t Column, float Number, uint8_t DeciLeng
 	if (IntPart >= 0)
 	{
 		OLED_ShowChar(Line, Column, '+');
-		OLED_ShowNum(Line, Column + 1, IntPart, 1);
+		OLED_ShowNum(Line, Column + 1, (uint32_t)IntPart, IntLength);
 	}
 	else
 	{
 		OLED_ShowChar(Line, Column, '-');
-		OLED_ShowNum(Line, Column + 1, -IntPart, 1);
+		OLED_ShowNum(Line, Column + 1,
+			0U - (uint32_t)IntPart, IntLength);
 	}
 	
 	/* 显示小数点 */
-	OLED_ShowChar(Line, Column + 2, '.');
+	OLED_ShowChar(Line, Column + IntLength + 1, '.');
 	
 	/* 显示小数部分 */
-	OLED_ShowNum(Line, Column + 3, DecPart, DeciLength);
+	OLED_ShowNum(Line, Column + IntLength + 2, DecPart, DeciLength);
 }
 
 /**
@@ -415,4 +426,3 @@ void OLED_Init(void)
 		
 	OLED_Clear();				//OLED清屏
 }
-

@@ -49,10 +49,10 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for DisplayTask */
-osThreadId_t DisplayTaskHandle;
-const osThreadAttr_t DisplayTask_attributes = {
-  .name = "DisplayTask",
+/* Definitions for MonitorTask */
+osThreadId_t MonitorTaskHandle;
+const osThreadAttr_t MonitorTask_attributes = {
+  .name = "MonitorTask",
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
@@ -60,20 +60,8 @@ const osThreadAttr_t DisplayTask_attributes = {
 osThreadId_t MotorCtrlTaskHandle;
 const osThreadAttr_t MotorCtrlTask_attributes = {
   .name = "MotorCtrlTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh,
-};
-/* Definitions for MonitorTask */
-osThreadId_t MonitorTaskHandle;
-const osThreadAttr_t MonitorTask_attributes = {
-  .name = "MonitorTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for MotorDatasQueue */
-osMessageQueueId_t MotorDatasQueueHandle;
-const osMessageQueueAttr_t MotorDatasQueue_attributes = {
-  .name = "MotorDatasQueue"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,9 +69,8 @@ const osMessageQueueAttr_t MotorDatasQueue_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDisplayTask(void *argument);
-void StartMotorCtrlTask(void *argument);
 void StartMonitorTask(void *argument);
+void StartMotorCtrlTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -128,23 +115,16 @@ void MX_FREERTOS_Init(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
-  /* Create the queue(s) */
-  /* creation of MotorDatasQueue */
-  MotorDatasQueueHandle = osMessageQueueNew (5, sizeof(MotorDatasType), &MotorDatasQueue_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of DisplayTask */
-  DisplayTaskHandle = osThreadNew(StartDisplayTask, NULL, &DisplayTask_attributes);
+  /* creation of MonitorTask */
+  MonitorTaskHandle = osThreadNew(StartMonitorTask, NULL, &MonitorTask_attributes);
 
   /* creation of MotorCtrlTask */
   MotorCtrlTaskHandle = osThreadNew(StartMotorCtrlTask, NULL, &MotorCtrlTask_attributes);
-
-  /* creation of MonitorTask */
-  MonitorTaskHandle = osThreadNew(StartMonitorTask, NULL, &MonitorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -154,42 +134,6 @@ void MX_FREERTOS_Init(void) {
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
-}
-
-/* USER CODE BEGIN Header_StartDisplayTask */
-/**
-  * @brief  Function implementing the DisplayTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDisplayTask */
-__weak void StartDisplayTask(void *argument)
-{
-  /* USER CODE BEGIN StartDisplayTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1000);
-  }
-  /* USER CODE END StartDisplayTask */
-}
-
-/* USER CODE BEGIN Header_StartMotorCtrlTask */
-/**
-* @brief Function implementing the MotorCtrlTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartMotorCtrlTask */
-__weak void StartMotorCtrlTask(void *argument)
-{
-  /* USER CODE BEGIN StartMotorCtrlTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1000);
-  }
-  /* USER CODE END StartMotorCtrlTask */
 }
 
 /* USER CODE BEGIN Header_StartMonitorTask */
@@ -208,6 +152,24 @@ __weak void StartMonitorTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartMonitorTask */
+}
+
+/* USER CODE BEGIN Header_StartMotorCtrlTask */
+/**
+* @brief Function implementing the MotorCtrlTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartMotorCtrlTask */
+__weak void StartMotorCtrlTask(void *argument)
+{
+  /* USER CODE BEGIN StartMotorCtrlTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1000);
+  }
+  /* USER CODE END StartMotorCtrlTask */
 }
 
 /* Private application code --------------------------------------------------*/

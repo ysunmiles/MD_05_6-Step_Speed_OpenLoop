@@ -65,11 +65,11 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, OLED_SCL_Pin|OLED_SDA_Pin|OLED_VCC_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : KEY0_Pin */
-  GPIO_InitStruct.Pin = KEY0_Pin;
+  /*Configure GPIO pins : KEY1_Pin KEY2_Pin */
+  GPIO_InitStruct.Pin = KEY1_Pin|KEY2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(KEY0_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CTRL_SD_Pin */
   GPIO_InitStruct.Pin = CTRL_SD_Pin;
@@ -77,6 +77,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(CTRL_SD_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PH2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /*Configure GPIO pin : OLED_GND_Pin */
   GPIO_InitStruct.Pin = OLED_GND_Pin;
@@ -88,7 +94,7 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pins : HALLU_Pin HALLV_Pin HALLW_Pin */
   GPIO_InitStruct.Pin = HALLU_Pin|HALLV_Pin|HALLW_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PWM_UL_Pin PWM_VL_Pin PWM_WL_Pin */
@@ -115,6 +121,12 @@ void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI2_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
