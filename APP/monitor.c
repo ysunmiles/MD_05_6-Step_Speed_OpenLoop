@@ -7,7 +7,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define SPEED_AVERAGE_WINDOW 18U
+#define SPEED_AVERAGE_WINDOW 6U
 
 static float updateSpeedAverage(float sample)
 {
@@ -77,7 +77,9 @@ void StartMonitorTask(void *argument)
 
     for(;;)
     {
+        MotorDatasType MotorData;
         uint32_t speedx100;
+        static float speedSample;
 
         if (xTaskNotifyWait(0, UINT32_MAX, &speedx100, pdMS_TO_TICKS(500)) == pdTRUE)
         {
@@ -87,6 +89,7 @@ void StartMonitorTask(void *argument)
         {
             speedSample = 0.0f;
         }
+
         MotorData.speed = updateSpeedAverage(speedSample);
         MotorData.BEMFu = (float)ADC3Data[3]/4095.0 * 3.3 * 25;
         MotorData.BEMFv = (float)ADC3Data[2]/4095.0 * 3.3 * 25;
