@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 typedef struct {
-    float BEMFu, BEMFv, BEMFw, Iu, Iv, Iw, Vbus, temp;
+    float BEMFu, BEMFv, BEMFw, Iu, Iv, Iw, Vbus, temp, speed;
     uint8_t Hallu, Hallv, Hallw;
 } MotorDatasType;
 

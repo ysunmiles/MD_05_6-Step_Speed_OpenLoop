@@ -28,6 +28,7 @@ void StartMonitorTask(void *argument)
     {
         static MotorDatasType MotorData;
         
+        MotorData.speed = (float)ulTaskNotifyTake(pdTRUE, osWaitForever);
         MotorData.BEMFu = (float)ADC3Data[3]/4095.0 * 3.3 * 25;
         MotorData.BEMFv = (float)ADC3Data[2]/4095.0 * 3.3 * 25;
         MotorData.BEMFw = (float)ADC3Data[1]/4095.0 * 3.3 * 25;
@@ -42,8 +43,6 @@ void StartMonitorTask(void *argument)
         MotorData.Hallw = HAL_GPIO_ReadPin(HALLW_GPIO_Port, HALLW_Pin);
 
         osMessageQueuePut(MotorDatasQueueHandle, &MotorData, 0, osWaitForever);
-
-        osDelay(100);
     }
 
 }

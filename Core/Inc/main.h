@@ -92,10 +92,13 @@ void Error_Handler(void);
 #define OLED_GND_GPIO_Port GPIOG
 #define HALLU_Pin GPIO_PIN_10
 #define HALLU_GPIO_Port GPIOH
+#define HALLU_EXTI_IRQn EXTI15_10_IRQn
 #define HALLV_Pin GPIO_PIN_11
 #define HALLV_GPIO_Port GPIOH
+#define HALLV_EXTI_IRQn EXTI15_10_IRQn
 #define HALLW_Pin GPIO_PIN_12
 #define HALLW_GPIO_Port GPIOH
+#define HALLW_EXTI_IRQn EXTI15_10_IRQn
 #define PWM_UL_Pin GPIO_PIN_13
 #define PWM_UL_GPIO_Port GPIOB
 #define PWM_VL_Pin GPIO_PIN_14
