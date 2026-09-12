@@ -5,42 +5,40 @@
 #include "OLED.h"
 #include "motorCtrl.h"
 
+static volatile uint8_t motorState;
+static uint8_t lastHallSignal = 0xFF;
 static volatile MotorDirection motorDirection = MOTOR_DIR_FORWARD;
 
-void motorCtrl_SetDirection(MotorDirection direction)
-{
-    if (direction == MOTOR_DIR_FORWARD || direction == MOTOR_DIR_REVERSE)
-    {
-        motorDirection = direction;
-    }
-}
-
-MotorDirection motorCtrl_GetDirection(void)
+MotorDirection MotorCtrl_GetDirection(void)
 {
     return motorDirection;
 }
 
-void setShutdown(GPIO_PinState State)
+void MotorCtrl_SetShutdown(GPIO_PinState State)
 {
     HAL_GPIO_WritePin(CTRL_SD_GPIO_Port, CTRL_SD_Pin, State);
 }
 
-void driveMotor(uint8_t hallSignal, uint8_t rotateDirection)
+void MotorCtrl_Reset(void)
 {
-    static uint8_t lastHallSignal = 0xFF;
-    if (hallSignal == lastHallSignal)
-    {
-        return;
-    }
-    lastHallSignal = hallSignal;
-
+    HAL_TIM_Base_Stop(&htim1);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
     HAL_GPIO_WritePin(PWM_UL_GPIO_Port, PWM_UL_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(PWM_VL_GPIO_Port, PWM_VL_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(PWM_WL_GPIO_Port, PWM_WL_Pin, GPIO_PIN_RESET);
+}
 
+void MotorCtrl_DriveMotor(uint8_t hallSignal, uint8_t rotateDirection)
+{
+    if (hallSignal == lastHallSignal){
+        return;
+    }else{
+        lastHallSignal = hallSignal;
+    }
+
+    MotorCtrl_Reset();
     if (rotateDirection == 1)
     {
         switch (hallSignal) {
@@ -103,27 +101,28 @@ void driveMotor(uint8_t hallSignal, uint8_t rotateDirection)
                 break;
         }
     }
+    HAL_TIM_Base_Start_IT(&htim1);
 }
 
 void StartMotorCtrlTask(void *argument)
 {
     for(;;)
     {
-        static uint8_t motorState = 0;
         uint8_t keyValue = ulTaskNotifyTake(pdTRUE, osWaitForever);
+        lastHallSignal = 0xFF;
         if (keyValue == 1)
         {
             if (motorState==0 || motorState==2)
             {
-                setShutdown(GPIO_PIN_SET);
-                HAL_TIM_Base_Start_IT(&htim1);
-                motorCtrl_SetDirection(MOTOR_DIR_FORWARD);
+                motorDirection = MOTOR_DIR_FORWARD;
+                MotorCtrl_SetShutdown(GPIO_PIN_SET);
+                MotorCtrl_PWMCallback(motorDirection);
                 motorState = 1;
             }
             else if (motorState == 1)
             {
-                setShutdown(GPIO_PIN_RESET);
-                HAL_TIM_Base_Stop(&htim1);
+                MotorCtrl_Reset();
+                MotorCtrl_SetShutdown(GPIO_PIN_RESET);
                 motorState = 0;
             }
         }
@@ -131,15 +130,15 @@ void StartMotorCtrlTask(void *argument)
         {
             if (motorState==0 || motorState==1)
             {
-                setShutdown(GPIO_PIN_SET);
-                HAL_TIM_Base_Start_IT(&htim1);
-                motorCtrl_SetDirection(MOTOR_DIR_REVERSE);
+                motorDirection = MOTOR_DIR_REVERSE;
+                MotorCtrl_SetShutdown(GPIO_PIN_SET);
+                MotorCtrl_PWMCallback(motorDirection);
                 motorState = 2;
             }
             else if (motorState == 2)
             {
-                setShutdown(GPIO_PIN_RESET);
-                HAL_TIM_Base_Stop(&htim1);
+                MotorCtrl_Reset();
+                MotorCtrl_SetShutdown(GPIO_PIN_RESET);
                 motorState = 0;
             }
         }
@@ -165,10 +164,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         if (tickus == 0) {   
             HAL_TIM_Base_Start(&htim5);
             return;}
-        float speedx100 = (float)100*60/(tickus*6*2*1e-6);
-        
-        BaseType_t higherPriorityTaskWoken = pdFALSE;
-        xTaskNotifyFromISR(MonitorTaskHandle, (uint32_t)speedx100, eSetValueWithOverwrite, &higherPriorityTaskWoken);
+
+        xTaskNotifyFromISR(MonitorTaskHandle, (uint32_t)tickus, eSetValueWithOverwrite, pdFALSE);
         __HAL_TIM_SET_COUNTER(&htim5, 0);
         HAL_TIM_Base_Start(&htim5);
     }
@@ -185,10 +182,10 @@ uint8_t getHall(void)
     return hallSignal;
 }
 
-void motorCtrl_PWMCallback(MotorDirection direction)
+void MotorCtrl_PWMCallback(MotorDirection direction)
 {
     // 获取hall信号
     uint8_t hallSignal = getHall();
     // 通过hall信号设定磁矢量
-    driveMotor(hallSignal, (uint8_t)direction);
+    MotorCtrl_DriveMotor(hallSignal, (uint8_t)direction);
 }

@@ -78,19 +78,19 @@ void StartMonitorTask(void *argument)
     for(;;)
     {
         MotorDatasType MotorData;
-        uint32_t speedx100;
+        uint32_t tickus;
         static float speedSample;
 
-        if (xTaskNotifyWait(0, UINT32_MAX, &speedx100, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xTaskNotifyWait(0, UINT32_MAX, &tickus, pdMS_TO_TICKS(500)) == pdTRUE)
         {
-            speedSample = (float)speedx100 / 100.0f;
+            speedSample = (float)60e6/(tickus*6*2);
         }
         else
         {
             speedSample = 0.0f;
         }
 
-        MotorData.speed = updateSpeedAverage(speedSample);
+        MotorData.speed = speedSample;
         MotorData.BEMFu = (float)ADC3Data[3]/4095.0 * 3.3 * 25;
         MotorData.BEMFv = (float)ADC3Data[2]/4095.0 * 3.3 * 25;
         MotorData.BEMFw = (float)ADC3Data[1]/4095.0 * 3.3 * 25;

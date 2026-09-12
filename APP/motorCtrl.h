@@ -9,8 +9,7 @@ typedef enum
     MOTOR_DIR_REVERSE = 2
 } MotorDirection;
 
-void motorCtrl_SetDirection(MotorDirection direction);
-MotorDirection motorCtrl_GetDirection(void);
-void motorCtrl_PWMCallback(MotorDirection direction);
+MotorDirection MotorCtrl_GetDirection(void);
+void MotorCtrl_PWMCallback(MotorDirection direction);
 
 #endif
