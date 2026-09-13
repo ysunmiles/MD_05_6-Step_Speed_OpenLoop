@@ -6,8 +6,13 @@
 #include "OLED.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include "motorCtrl.h"
 
 #define SPEED_AVERAGE_WINDOW 6U
+
+static uint8_t uartRxBuffer[8];
+static uint16_t uartDuty;
 
 static float updateSpeedAverage(float sample)
 {
@@ -44,7 +49,7 @@ static void SendMotorDataFireWater(const MotorDatasType *motorData)
 {
     char frame[160];
     int frameLength = snprintf(frame, sizeof(frame),
-        "%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%u,%u,%u,%.3f\n",
+        "%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%u,%.3f,%3u\n",
         
         (double)motorData->BEMFu,
         (double)motorData->BEMFv,
@@ -54,10 +59,10 @@ static void SendMotorDataFireWater(const MotorDatasType *motorData)
         (double)motorData->Iw,
         (double)motorData->Vbus,
         (double)motorData->temp,
-        (unsigned int)motorData->Hallu,
-        (unsigned int)motorData->Hallv,
-        (unsigned int)motorData->Hallw,
-        (double)motorData->speed);
+        (unsigned int)motorData->hall,
+        (double)motorData->speed,
+        (unsigned int)motorData->duty
+    );
 
     if (frameLength > 0 && frameLength < (int)sizeof(frame))
     {
@@ -74,12 +79,13 @@ void StartMonitorTask(void *argument)
     static uint16_t ADC3Data[4] = {0};
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC1Data, 4);
     HAL_ADC_Start_DMA(&hadc3, (uint32_t*)ADC3Data, 4);
+    HAL_UARTEx_ReceiveToIdle_IT(&huart1, uartRxBuffer, sizeof(uartRxBuffer));
 
     for(;;)
     {
-        MotorDatasType MotorData;
-        uint32_t tickus;
+        static MotorDatasType MotorData;
         static float speedSample;
+        uint32_t tickus;
 
         if (xTaskNotifyWait(0, UINT32_MAX, &tickus, pdMS_TO_TICKS(500)) == pdTRUE)
         {
@@ -90,7 +96,7 @@ void StartMonitorTask(void *argument)
             speedSample = 0.0f;
         }
 
-        MotorData.speed = speedSample;
+        MotorData.speed = updateSpeedAverage(speedSample);
         MotorData.BEMFu = (float)ADC3Data[3]/4095.0 * 3.3 * 25;
         MotorData.BEMFv = (float)ADC3Data[2]/4095.0 * 3.3 * 25;
         MotorData.BEMFw = (float)ADC3Data[1]/4095.0 * 3.3 * 25;
@@ -99,17 +105,27 @@ void StartMonitorTask(void *argument)
         MotorData.Iv = ((float)ADC1Data[1]/4095.0 * 3.3 - 1.25)/0.12;
         MotorData.Iw = ((float)ADC1Data[0]/4095.0 * 3.3 - 1.25)/0.12;
         MotorData.Vbus = (float)ADC1Data[3]/4095.0 * 3.3 * 25;
-
-        MotorData.Hallu = HAL_GPIO_ReadPin(HALLU_GPIO_Port, HALLU_Pin);
-        MotorData.Hallv = HAL_GPIO_ReadPin(HALLV_GPIO_Port, HALLV_Pin);
-        MotorData.Hallw = HAL_GPIO_ReadPin(HALLW_GPIO_Port, HALLW_Pin);
+        MotorData.hall = MotorCtrl_GetHall();
+        MotorData.duty = MotorCtrl_GetDuty();
 
         SendMotorDataFireWater(&MotorData);
 
-        OLED_ShowString(1, 7, "          ");
-        OLED_ShowFloat(1, 7, MotorData.speed, 2);
+        // OLED_ShowString(1, 7, "          ");
+        // OLED_ShowFloat(1, 7, MotorData.speed, 2);
 
-        osDelay(20);
+        // osDelay(20);
     }
 
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if (huart == &huart1)
+    {
+        uartRxBuffer[Size < sizeof(uartRxBuffer) ? Size : sizeof(uartRxBuffer) - 1U] = '\0';
+        uartDuty = (uint16_t)atoi((char *)uartRxBuffer);
+
+        MotorCtrl_SetDuty(uartDuty);
+        HAL_UARTEx_ReceiveToIdle_IT(&huart1, uartRxBuffer, sizeof(uartRxBuffer));
+    }
 }

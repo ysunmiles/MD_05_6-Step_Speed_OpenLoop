@@ -88,11 +88,23 @@ The initial compare value is `10`, corresponding to approximately 10% duty cycle
 
 Verify the driver IC enable polarity before powering the motor. The firmware currently calls `setShutdown(GPIO_PIN_RESET)` when the motor-control task starts.
 
-## VOFA+ FireWater Output (Optional)
+## USART1 Monitor and Duty Input
 
-USART1 can be optionally configured for **115200 baud, 8 data bits, no parity, 1 stop bit** to stream real-time diagnostic data. Each line contains comma-separated values for motor monitoring. Refer to the display task implementation for the current output format.
+USART1 is configured for **1152000 baud, 8 data bits, no parity, 1 stop bit**. It streams real-time diagnostic data as comma-separated values:
 
-In VOFA+, select the serial port, set the baud rate to 115200, and choose the appropriate protocol to view real-time motor data and diagnostics.
+```text
+BEMFu,BEMFv,BEMFw,Iu,Iv,Iw,Vbus,temp,hall,speed
+```
+
+The receive idle interrupt accepts an ASCII decimal duty value, for example:
+
+```text
+50
+```
+
+The received string is converted to `uint8_t` and stored as `uartDuty`. Input values should be in the range `0` to `100`.
+
+For VOFA+ FireWater monitoring, select USART1, set the baud rate to `1152000`, and use comma-separated text display.
 
 ## Project Layout
 

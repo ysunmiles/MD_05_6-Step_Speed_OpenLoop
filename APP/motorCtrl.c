@@ -9,6 +9,8 @@ static volatile uint8_t motorState;
 static uint8_t lastHallSignal = 0xFF;
 static volatile MotorDirection motorDirection = MOTOR_DIR_FORWARD;
 
+static uint16_t duty = 10;
+
 MotorDirection MotorCtrl_GetDirection(void)
 {
     return motorDirection;
@@ -17,6 +19,15 @@ MotorDirection MotorCtrl_GetDirection(void)
 void MotorCtrl_SetShutdown(GPIO_PinState State)
 {
     HAL_GPIO_WritePin(CTRL_SD_GPIO_Port, CTRL_SD_Pin, State);
+}
+
+void MotorCtrl_SetDuty(uint16_t uartDuty)
+{
+    duty = uartDuty;
+}
+uint16_t MotorCtrl_GetDuty(void)
+{
+    return duty;
 }
 
 void MotorCtrl_Reset(void)
@@ -32,6 +43,10 @@ void MotorCtrl_Reset(void)
 
 void MotorCtrl_DriveMotor(uint8_t hallSignal, uint8_t rotateDirection)
 {
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
+
     if (hallSignal == lastHallSignal){
         return;
     }else{
@@ -171,21 +186,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 }
 
-uint8_t getHall(void)
+uint8_t MotorCtrl_GetHall(void)
 {
     uint8_t hallu, hallv, hallw;
     hallu = HAL_GPIO_ReadPin(HALLU_GPIO_Port, HALLU_Pin);
     hallv = HAL_GPIO_ReadPin(HALLV_GPIO_Port, HALLV_Pin);
     hallw = HAL_GPIO_ReadPin(HALLW_GPIO_Port, HALLW_Pin);
 
-    uint8_t hallSignal = (hallu<<2)|(hallv<<1)|(hallw);
+    uint8_t hallSignal = (hallw<<2)|(hallv<<1)|(hallu);
     return hallSignal;
 }
 
 void MotorCtrl_PWMCallback(MotorDirection direction)
 {
     // 获取hall信号
-    uint8_t hallSignal = getHall();
+    uint8_t hallSignal = MotorCtrl_GetHall();
     // 通过hall信号设定磁矢量
     MotorCtrl_DriveMotor(hallSignal, (uint8_t)direction);
 }

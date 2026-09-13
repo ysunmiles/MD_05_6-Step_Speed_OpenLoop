@@ -1,8 +1,6 @@
 #ifndef __MOTORCTRL_H
 #define __MOTORCTRL_H
 
-#define PWM_DUTY    10
-
 typedef enum
 {
     MOTOR_DIR_FORWARD = 1,
@@ -11,5 +9,8 @@ typedef enum
 
 MotorDirection MotorCtrl_GetDirection(void);
 void MotorCtrl_PWMCallback(MotorDirection direction);
+uint8_t MotorCtrl_GetHall(void);
+void MotorCtrl_SetDuty(uint16_t uartDuty);
+uint16_t MotorCtrl_GetDuty(void);
 
 #endif
