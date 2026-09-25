@@ -56,11 +56,11 @@ const osThreadAttr_t MonitorTask_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for MotorCtrlTask */
-osThreadId_t MotorCtrlTaskHandle;
-const osThreadAttr_t MotorCtrlTask_attributes = {
-  .name = "MotorCtrlTask",
-  .stack_size = 512 * 4,
+/* Definitions for BtnStateTask */
+osThreadId_t BtnStateTaskHandle;
+const osThreadAttr_t BtnStateTask_attributes = {
+  .name = "BtnStateTask",
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 
@@ -70,7 +70,7 @@ const osThreadAttr_t MotorCtrlTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartMonitorTask(void *argument);
-void StartMotorCtrlTask(void *argument);
+void StartBtnStateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -123,8 +123,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of MonitorTask */
   MonitorTaskHandle = osThreadNew(StartMonitorTask, NULL, &MonitorTask_attributes);
 
-  /* creation of MotorCtrlTask */
-  MotorCtrlTaskHandle = osThreadNew(StartMotorCtrlTask, NULL, &MotorCtrlTask_attributes);
+  /* creation of BtnStateTask */
+  BtnStateTaskHandle = osThreadNew(StartBtnStateTask, NULL, &BtnStateTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -154,22 +154,22 @@ __weak void StartMonitorTask(void *argument)
   /* USER CODE END StartMonitorTask */
 }
 
-/* USER CODE BEGIN Header_StartMotorCtrlTask */
+/* USER CODE BEGIN Header_StartBtnStateTask */
 /**
-* @brief Function implementing the MotorCtrlTask thread.
+* @brief Function implementing the BtnStateTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartMotorCtrlTask */
-__weak void StartMotorCtrlTask(void *argument)
+/* USER CODE END Header_StartBtnStateTask */
+__weak void StartBtnStateTask(void *argument)
 {
-  /* USER CODE BEGIN StartMotorCtrlTask */
+  /* USER CODE BEGIN StartBtnStateTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1000);
+    osDelay(1);
   }
-  /* USER CODE END StartMotorCtrlTask */
+  /* USER CODE END StartBtnStateTask */
 }
 
 /* Private application code --------------------------------------------------*/

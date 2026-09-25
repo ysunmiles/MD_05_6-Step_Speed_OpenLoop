@@ -47,9 +47,8 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-extern osThreadId_t DisplayTaskHandle;
-extern osThreadId_t MotorCtrlTaskHandle;
 extern osThreadId_t MonitorTaskHandle;
+extern osThreadId_t BtnStateTaskHandle;
 
 extern osMessageQueueId_t MotorDatasQueueHandle;
 /* USER CODE END EC */

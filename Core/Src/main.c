@@ -184,7 +184,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
   if (htim->Instance == TIM1)
   {
-    MotorCtrl_PWMCallback(MotorCtrl_GetDirection());
+    MotorCtrl_PWMCallback();
   }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM4)
@@ -192,7 +192,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-
+  if (htim->Instance == TIM5)
+  {
+    MotorCtrl_SetSpeedZero();
+  }
   /* USER CODE END Callback 1 */
 }
 
